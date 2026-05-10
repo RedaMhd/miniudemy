@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.override.yml  —  DEV HOT-RELOAD overrides
+#
+# Docker Compose automatically merges this file on top of docker-compose.yml.
+# Run the stack as usual:
+#   docker compose up
+#
+# What this file does:
+#   • Mounts each service's source directory into the container so code changes
+#     are reflected immediately without a rebuild.
+#   • Switches backend services to `node --watch` (Node 20 built-in) for
+#     automatic server restarts on file save.
+#   • Vite's HMR handles frontend changes instantly.
+#   • NGINX config is bind-mounted; run `docker compose restart api-gateway`
+#     (fast, no rebuild) when you change nginx.conf.
+#
+# node_modules stay inside the container — only source files are mounted.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  # ── Auth Service ─────────────────────────────────────────────────────────
+  auth-service:
+    volumes:
+      - ./auth-service/src:/usr/src/app/src:z
+      - ./shared:/usr/src/app/node_modules/shared:z
+    command: node --watch src/server.js
+
+  # ── Course Service ────────────────────────────────────────────────────────
+  course-service:
+    volumes:
+      - ./course-service/src:/usr/src/app/src:z
+      - ./shared:/usr/src/app/node_modules/shared:z
+    command: node --watch src/server.js
+
+  # ── Progress Service ──────────────────────────────────────────────────────
+  progress-service:
+    volumes:
+      - ./progress-service/src:/usr/src/app/src:z
+      - ./shared:/usr/src/app/node_modules/shared:z
+    command: node --watch src/server.js
+
+  # ── Notification Service ──────────────────────────────────────────────────
+  notification-service:
+    volumes:
+      - ./notification-service/src:/usr/src/app/src:z
+      - ./shared:/usr/src/app/node_modules/shared:z
+    command: node --watch src/server.js
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    volumes:
+      - ./frontend/src:/usr/src/app/src:z
+      - ./frontend/index.html:/usr/src/app/index.html:z
+      - ./frontend/vite.config.js:/usr/src/app/vite.config.js:z
+
+  # ── API Gateway ───────────────────────────────────────────────────────────
+  # Apply changes with: docker compose restart api-gateway  (< 1 second, no rebuild)
+  api-gateway:
+    volumes:
+      - ./api-gateway/nginx.conf:/etc/nginx/nginx.conf:z
+

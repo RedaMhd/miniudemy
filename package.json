@@ -1,0 +1,17 @@
+{
+  "name": "microservices-online-course",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "auth-service",
+    "course-service",
+    "progress-service",
+    "notification-service",
+    "frontend"
+  ],
+  "scripts": {
+    "start": "docker compose up --build",
+    "dev": "docker compose up"
+  }
+}

@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-db:
+    image: mongo:4.4
+    container_name: auth-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - auth-data:/data/db
+
+  course-db:
+    image: mongo:4.4
+    container_name: course-db
+    ports:
+      - "27018:27017"
+    volumes:
+      - course-data:/data/db
+
+  progress-db:
+    image: mongo:4.4
+    container_name: progress-db
+    ports:
+      - "27019:27017"
+    volumes:
+      - progress-data:/data/db
+
+  notification-db:
+    image: mongo:4.4
+    container_name: notification-db
+    ports:
+      - "27020:27017"
+    volumes:
+      - notification-data:/data/db
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb://auth-db:27017/auth_db
+      - JWT_SECRET=supersecretjwtkey123
+    depends_on:
+      - auth-db
+    restart: unless-stopped
+
+  course-service:
+    build:
+      context: .
+      dockerfile: course-service/Dockerfile
+    container_name: course-service
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://course-db:27017/course_db
+      - JWT_SECRET=supersecretjwtkey123
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      course-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  progress-service:
+    build:
+      context: .
+      dockerfile: progress-service/Dockerfile
+    container_name: progress-service
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb://progress-db:27017/progress_db
+      - JWT_SECRET=supersecretjwtkey123
+      - COURSE_SERVICE_URL=http://course-service:5002
+    depends_on:
+      - progress-db
+      - course-service
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: notification-service
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://notification-db:27017/notification_db
+      - JWT_SECRET=supersecretjwtkey123
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      notification-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - course-service
+      - progress-service
+      - notification-service
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_GATEWAY_URL=http://localhost:8080
+    depends_on:
+      - api-gateway
+
+volumes:
+  auth-data:
+  course-data:
+  progress-data:
+  notification-data:
