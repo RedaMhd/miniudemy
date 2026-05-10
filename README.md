@@ -47,7 +47,7 @@ npm start
 ```
 *Or directly via Docker Compose:*
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 This will start all containers. The React Frontend will be available at [http://localhost:5173](http://localhost:5173).
 
@@ -73,7 +73,7 @@ This will start all containers. The React Frontend will be available at [http://
 - `PATCH /api/notifications/:id/read`
 
 ## 9. Team Members
-- Reda Mouhdi
+- Rida Mouhdi
 - Mbarek Hani
 - Ayoub Jakouri
 - Yassine Azarguy
